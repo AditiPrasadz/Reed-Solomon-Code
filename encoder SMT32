@@ -1,0 +1,61 @@
+#include "main.h" // Include your STM32Cube HAL library header file
+
+// UART handle declaration
+extern UART_HandleTypeDef huart1;
+
+// Galois Field arithmetic operations
+uint8_t gfAdd(uint8_t a, uint8_t b) {
+    return a ^ b;
+}
+
+uint8_t gfMultiply(uint8_t a, uint8_t b) {
+    uint8_t result = 0;
+    while (b) {
+        if (b & 1)
+            result ^= a;
+        a <<= 1;
+        if (a & 0x100)
+            a ^= 0x11D;
+        b >>= 1;
+    }
+    return result;
+}
+
+// Reed-Solomon encoding
+std::vector<uint8_t> reedSolomonEncode(const std::vector<uint8_t>& data, int numDataBytes, int numParityBytes) {
+    std::vector<uint8_t> codeword(numDataBytes + numParityBytes, 0);
+    for (int i = 0; i < numDataBytes; i++) {
+        for (int j = 0; j < numParityBytes; j++) {
+            codeword[i + j] ^= gfMultiply(data[i], pow(2, numParityBytes - 1 - j));
+        }
+    }
+    return codeword;
+}
+
+// Reed-Solomon decoding
+std::vector<uint8_t> reedSolomonDecode(std::vector<uint8_t>& receivedData, int numDataBytes, int numParityBytes) {
+    // Calculate syndromes
+    std::vector<uint8_t> syndromes(numParityBytes, 0);
+    for (int i = 0; i < numParityBytes; i++) {
+        for (int j = 0; j < numDataBytes + numParityBytes; j++) {
+            syndromes[i] ^= gfMultiply(receivedData[j], pow(2, numParityBytes - 1 - i));
+        }
+    }
+
+    // Rest of the decoding implementation
+
+    // ...
+
+    return receivedData;
+}
+
+// Function to transmit a string via UART
+void UART_TransmitString(const char* str) {
+    HAL_UART_Transmit(&huart1, (uint8_t*)str, strlen(str), HAL_MAX_DELAY);
+}
+
+int main(void) {
+    // Enable UART receiver
+    HAL_UART_Receive_IT(&huart1, (uint8_t*)receivedData, RX_BUFFER_SIZE);
+
+    // Example usage
